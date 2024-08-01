@@ -1,16 +1,42 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.22)
 
 include(FetchContent)
 
 project(ngbem)
-
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
 option( USE_KiFMM "Use KiFMM" OFF )
 option( USE_FMM3D "Use FMM3D" OFF )
+
+option( USE_IFGF "Use IFGF" OFF )
 
 include(ngsolve_addon.cmake)
 
 add_ngsolve_addon(_ngbem src/ngbem.cpp src/python_bem.cpp
-      src/hmat.cpp src/intrules.cpp src/test_compression.cpp)
+  src/hmat.cpp src/intrules.cpp src/test_compression.cpp)
+
+if(USE_IFGF)
+
+  target_compile_definitions(_ngbem PRIVATE USE_IFGF)
+  FetchContent_Declare(
+    ifgf
+    GIT_REPOSITORY https://github.com/arieder/ifgf.git
+    GIT_TAG "main"
+    EXCLUDE_FROM_ALL
+  )
+  FetchContent_Populate(ifgf)
+
+  target_include_directories(_ngbem PRIVATE ${FETCHCONTENT_BASE_DIR}/ifgf-src/)
+
+  find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+  find_package (TBB REQUIRED)
+  
+  include_directories(${EIGEN3_INCLUDE_DIR} ${TBB_INCLUDE_DIR})
+  target_link_libraries(_ngbem  PRIVATE tbb)
+  
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Ofast")
+
+  
+endif(USE_IFGF)
 
 if(USE_KiFMM)
   target_compile_definitions(_ngbem PRIVATE USE_KiFMM)
@@ -59,11 +85,11 @@ else(USE_KiFMM)
     set_target_properties(fmm PROPERTIES IMPORTED_LOCATION ${fmm_lib_path})
     add_dependencies(fmm build_fmm)
 
-    find_library(fortran_lib NAMES gfortran)
+    #find_library(fortran_lib NAMES gfortran)
     find_package(OpenMP)
 
     target_include_directories(_ngbem PRIVATE ${fmm3d_SOURCE_DIR}/fmm3d-src/c)
-    target_link_libraries(_ngbem PRIVATE fmm ${fortran_lib} ${OpenMP_omp_LIBRARY})
+    target_link_libraries(_ngbem PRIVATE fmm gfortran ${OpenMP_omp_LIBRARY})
   endif(USE_FMM3D)
 endif(USE_KiFMM)
 
