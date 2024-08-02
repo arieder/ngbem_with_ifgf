@@ -75,7 +75,7 @@ namespace ngbem
     void CalcHMatrix(HMatrix<T> & hmatrix, LocalHeap &lh, struct BEMParameters &param) const;
 
 
-    virtual shared_ptr<BaseMatrix> CreateMatrixFMM(LocalHeap & lh) const = 0;
+      virtual shared_ptr<BaseMatrix> CreateMatrixFMM(LocalHeap & lh,   struct BEMParameters &param) const = 0;
     
     /** CalcBlockMatrix computes the block of entries with trialdofs and testdofs indices. */
     virtual void CalcBlockMatrix(FlatMatrix<T> matrix,
@@ -179,7 +179,7 @@ namespace ngbem
     CalcFarFieldBlock(FlatArray<DofId> trialdofs, FlatArray<DofId> testdofs,
                       LocalHeap &lh) const override;
 
-    shared_ptr<BaseMatrix> CreateMatrixFMM(LocalHeap & lh) const override;
+    shared_ptr<BaseMatrix> CreateMatrixFMM(LocalHeap & lh, struct BEMParameters &param) const override;
     
     virtual shared_ptr<CoefficientFunction> GetPotential(shared_ptr<GridFunction> gf) const override;
   };
@@ -449,7 +449,7 @@ namespace ngbem
     auto Evaluate (Vec<3,T> x, Vec<3,T> y, Vec<3,T> nx, Vec<3,T> ny) const
     {
       T norm = L2Norm(x-y);
-      T nxy = InnerProduct(ny, (x-y));
+      T nxy = InnerProduct(nx, (x-y)); //TODO change back
       auto kern = exp(Complex(0,kappa)*norm) / (4 * M_PI * norm*norm*norm)
         * ( nxy * (Complex(1,0)*T(1.) - Complex(0,kappa)*norm)  - Complex(0,kappa)*norm*norm);
       // return kern;

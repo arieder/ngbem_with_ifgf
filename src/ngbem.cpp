@@ -7,10 +7,12 @@
 #include "fmmoperator.hpp"
 
 
+
+#include "ifgfoperator.hpp"
+
+
 namespace ngbem
 {
-
-
   
   template <typename T>  
   IntegralOperator<T> ::
@@ -117,7 +119,7 @@ namespace ngbem
 
   template <typename KERNEL>
   shared_ptr<BaseMatrix> GenericIntegralOperator<KERNEL> ::
-  CreateMatrixFMM(LocalHeap & lh) const
+  CreateMatrixFMM(LocalHeap & lh,  struct BEMParameters &param) const
   {
     static Timer tall("ngbem fmm setup"); RegionTimer r(tall);
     Array<Vec<3>> xpts, ypts, xnv, ynv;
@@ -226,9 +228,18 @@ namespace ngbem
     };
 
     auto evalx = create_eval(*trial_space, *trial_evaluator);
-    auto evaly = create_eval(*test_space, *test_evaluator);    
-    auto fmmop = make_shared<FMM_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
-                                                    std::move(xnv), std::move(ynv));
+    auto evaly = create_eval(*test_space, *test_evaluator);
+    shared_ptr<BaseMatrix> fmmop;
+    if(param.method=="fmm") {
+	std::cout<<"standard_fmm"<<std::endl;
+	fmmop = make_shared<FMM_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
+						   std::move(xnv), std::move(ynv));
+
+    }
+    else {
+	fmmop = make_shared<IFGF_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
+						    std::move(xnv), std::move(ynv));
+    }
 
 
     if (trial_mesh != test_mesh)
@@ -677,9 +688,9 @@ namespace ngbem
     tie(common_vertex_x, common_vertex_y, common_vertex_weight) = CommonVertexIntegrationRule(param.intorder);
     tie(common_edge_x, common_edge_y, common_edge_weight) = CommonEdgeIntegrationRule(param.intorder);
     
-    if (param.method == "fmm")
+    if (param.method == "fmm" || param.method=="ifgf")
       {
-        matrix = this->CreateMatrixFMM(lh);
+	  matrix = this->CreateMatrixFMM(lh, param);
         return;
       }
     
