@@ -238,7 +238,7 @@ namespace ngbem
     }
     else {
 	fmmop = make_shared<IFGF_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
-						    std::move(xnv), std::move(ynv));
+						    std::move(xnv), std::move(ynv),param);
     }
 
 

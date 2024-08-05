@@ -3,6 +3,7 @@
 
 
 #include "fmmoperator.hpp"
+#include "ngbem.hpp"
 
 
 namespace ngbem
@@ -13,7 +14,7 @@ namespace ngbem
     {
     public:
 	IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		   Array<Vec<3>> _xnv, Array<Vec<3>> _ynv)
+		      Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param)
 	    :
 	    FMM_Operator<KERNEL>(_kernel,std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv))
 	{
@@ -44,31 +45,27 @@ namespace ngbem
 
   public:
       IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		   Array<Vec<3>> _xnv, Array<Vec<3>> _ynv)
+		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv, const BEMParameters& param)
 	  : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
 	    kernel(_kernel)
       {
 	  std::cout<<"creating ifgf op"<<std::endl;
-	  if constexpr (std::is_same<KERNEL, class HelmholtzSLKernel<3>>())
-		       {
-			   std::complex<double> waveNumber=-1i*_kernel.GetKappa();
-			   size_t leafSize=250;
-			   size_t order=6;
-			   int n_elem=1;
-			   double tol=-1;
+	  std::complex<double> waveNumber=-1i*_kernel.GetKappa();
+	  size_t leafSize=param.leafsize;
+	  size_t order=param.expansion_order;
+	  int n_elem=1;
+	  double tol=param.eps;
 
-			   std::cout<<"size="<<xpts.Size()<<std::endl;
-			   std::cout<<"size="<<ypts.Size()<<std::endl;
+	  std::cout<<"size="<<xpts.Size()<<std::endl;
+	  std::cout<<"size="<<ypts.Size()<<std::endl;
 
 
-			   op=make_unique<HelmholtzIfgfOperator<3> > (waveNumber,leafSize,order,n_elem,tol);
-
-			   auto srcs=Eigen::Map<typename OperatorType::PointArray>( xpts[0].Data(),3, xpts.Size());
-			   auto targets=Eigen::Map<typename OperatorType::PointArray>(ypts[0].Data(),3, ypts.Size());
-	    
-			   op->init(srcs,targets);
-		       }
-	
+	  op=make_unique<HelmholtzIfgfOperator<3> > (waveNumber,leafSize,order,n_elem,tol);
+	  
+	  auto srcs=Eigen::Map<typename OperatorType::PointArray>( xpts[0].Data(),3, xpts.Size());
+	  auto targets=Eigen::Map<typename OperatorType::PointArray>(ypts[0].Data(),3, ypts.Size());
+	  
+	  op->init(srcs,targets);	
       }
 
 
@@ -107,17 +104,17 @@ namespace ngbem
 
   public:
       IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		   Array<Vec<3>> _xnv, Array<Vec<3>> _ynv)
+		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param)
 	  : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
 	    kernel(_kernel)
       {
 	  std::cout<<"creating ifgf cf op"<<std::endl;
-	  std::complex<double> waveNumber=-1i*_kernel.GetKappa();
-	  size_t leafSize=250;
-	  size_t order=6;
+	  double waveNumber=_kernel.GetKappa();
+	  size_t leafSize=param.leafsize;
+	  size_t order=param.expansion_order;
 	  int n_elem=1;
-	  double tol=-1;
-
+	  double tol=param.eps;
+	  
 	  std::cout<<"size="<<xpts.Size()<<std::endl;
 	  std::cout<<"size="<<ypts.Size()<<std::endl;
 
@@ -136,7 +133,7 @@ namespace ngbem
       void  Mult(const BaseVector & x, BaseVector & y) const 
       {
 	  std::cout<<"ifgf mult"<<std::endl;
-	  static Timer tall("ngbem fmm apply HelmholtzSL (IFGF)"); RegionTimer reg(tall);
+	  static Timer tall("ngbem fmm apply CombinedField (IFGF)"); RegionTimer reg(tall);
 	  auto fx = x.FV<Complex>();
 	  auto fy = y.FV<Complex>();
 
@@ -149,7 +146,6 @@ namespace ngbem
 
 	  auto y_map=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fy.Data(),fy.Size());
 	  y_map=results;
-	  //y *= 1.0 / (4*M_PI);
       }
 
   };
@@ -170,16 +166,16 @@ namespace ngbem
       //Array<Vec<3>> xpts, ypts, xnv, ynv;
   public:
       IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		   Array<Vec<3>> _xnv, Array<Vec<3>> _ynv)
+		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param)
       : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
 	kernel(_kernel)
     {
 	std::cout<<"creating ifgf op"<<std::endl;
 
-	size_t leafSize=250;
-	size_t order=10;
+	size_t leafSize=param.leafsize;
+	size_t order=param.expansion_order;
 	int n_elem=1;
-	double tol=-1;
+	double tol=param.eps;
 
 	std::cout<<"size="<<xpts.Size()<<std::endl;
 	std::cout<<"size="<<ypts.Size()<<std::endl;
