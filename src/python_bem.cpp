@@ -25,28 +25,28 @@ PYBIND11_MODULE(_ngbem, m)
 
   
   m.def("SingleLayerPotentialOperator", [](shared_ptr<FESpace> space, int intorder, int leafsize, double eta, double eps,
-                                           string method, bool testhmatrix,int expansion_order) -> shared_ptr<IntegralOperator<>>
+                                           string method, bool testhmatrix,int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<>>
   {
     if(!method.compare("dense")) {
        leafsize = INT_MAX;
        eta = 0.;
     }
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order});
+    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
     return make_unique<GenericIntegralOperator<LaplaceSLKernel<3>>>(space, space, LaplaceSLKernel<3>(), param);
     
   }, py::arg("space"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-	py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8, py::arg("n_elements")=8);
 
   m.def("SingleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space,
                                            optional<Region> trial_definedon, optional<Region> test_definedon,
                                            int intorder, int leafsize, double eta, double eps,
-                                           string method, bool testhmatrix, int expansion_order) -> shared_ptr<IntegralOperator<>>
+                                           string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<>>
   {
     if(!method.compare("dense")) {
        leafsize = INT_MAX;
        eta = 0.;
     }
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order});
+    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
     return make_unique<GenericIntegralOperator<LaplaceSLKernel<3>>>(trial_space, test_space,
                                                                     trial_definedon, test_definedon,
                                                                     trial_space -> GetEvaluator(BND),
@@ -55,20 +55,20 @@ PYBIND11_MODULE(_ngbem, m)
   }, py::arg("trial_space"), py::arg("test_space"),
         py::arg("trial_definedon")=nullopt, py::arg("test_definedon")=nullopt,
         py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-        py::arg("method")="aca", py::arg("testhmatrix")=false,py::arg("expansion_order")=8);
+        py::arg("method")="aca", py::arg("testhmatrix")=false,py::arg("expansion_order")=8,py::arg("n_elements")=8);
   
   
 
   m.def("DoubleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space,
                                            optional<Region> trial_definedon, optional<Region> test_definedon,
                                            int intorder, int leafsize, double eta, double eps,
-                                           string method, bool testhmatrix,int expansion_order) -> shared_ptr<IntegralOperator<>>
+                                           string method, bool testhmatrix,int expansion_order,int n_elements) -> shared_ptr<IntegralOperator<>>
   {
     if(!method.compare("dense")) {
        leafsize = INT_MAX;
        eta = 0.;
     }
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order});
+    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
     return make_unique<GenericIntegralOperator<LaplaceDLKernel<3>>>(trial_space, test_space,
                                                                     trial_definedon, test_definedon,
                                                                     trial_space -> GetEvaluator(BND),
@@ -79,14 +79,14 @@ PYBIND11_MODULE(_ngbem, m)
         py::arg("intorder")=3, py::arg("leafsize")=40,
         py::arg("eta")=2., py::arg("eps")=1e-6,
         py::arg("method")="aca", py::arg("testhmatrix")=false,
-	py::arg("expansion_order")=8);
+	py::arg("expansion_order")=8,py::arg("n_elements")=8);
 
 
   m.def("HypersingularOperator", [](shared_ptr<FESpace> space, optional<Region> definedon,
                                     int intorder, int leafsize, double eta, double eps,
-                                    string method, bool testhmatrix, int expansion_order) -> shared_ptr<IntegralOperator<>>
+                                    string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<>>
   {
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order});
+      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
     return make_unique<GenericIntegralOperator<LaplaceHSKernel<3>>>(space, space, definedon, definedon,
                                                                     make_shared<T_DifferentialOperator<DiffOpBoundaryRot>>(),
                                                                     make_shared<T_DifferentialOperator<DiffOpBoundaryRot>>(), 
@@ -94,42 +94,42 @@ PYBIND11_MODULE(_ngbem, m)
     
   }, py::arg("space"), py::arg("definedon")=nullopt,
         py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-        py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8);
+        py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8,py::arg("n_elements")=8);
   
   
 
   m.def("HelmholtzSingleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space, double kappa,
                                                     int intorder, int leafsize, double eta, double eps,
-                                                    string method, bool testhmatrix, int expansion_order) -> shared_ptr<IntegralOperator<Complex>>
+                                                    string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<Complex>>
   {
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order});
+      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
     return make_unique<GenericIntegralOperator<HelmholtzSLKernel<3>>>(trial_space, test_space, HelmholtzSLKernel<3>(kappa), param);
     
   }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-     py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=8);
 
 
 
   m.def("HelmholtzDoubleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space, double kappa,
                                                     int intorder, int leafsize, double eta, double eps,
-                                                    string method, bool testhmatrix, int expansion_order) -> shared_ptr<IntegralOperator<Complex>>
+                                                    string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<Complex>>
   {
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order});
+      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
     return make_unique<GenericIntegralOperator<HelmholtzDLKernel<3>>>(trial_space, test_space, HelmholtzDLKernel<3>(kappa), param);
     
   }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-     py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=8);
 
 
   m.def("HelmholtzCombinedFieldOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space, double kappa,
                                              int intorder, int leafsize, double eta, double eps,
-                                             string method, bool testhmatrix, int expansion_order) -> shared_ptr<IntegralOperator<Complex>>
+                                             string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<Complex>>
   {
-    BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix, expansion_order});
+      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix, expansion_order, n_elements});
     return make_unique<GenericIntegralOperator<CombinedFieldKernel<3>>>(trial_space, test_space, CombinedFieldKernel<3>(kappa), param);
     
   }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-     py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=8);
 
 
   m.def("HelmholtzHypersingularOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space, double kappa,  int intorder, int leafsize, double eta, double eps,

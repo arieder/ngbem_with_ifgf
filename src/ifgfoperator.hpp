@@ -29,8 +29,11 @@ namespace ngbem
 #include <laplace_ifgf.hpp>
 #include <Eigen/Dense>
 
-
-
+    #include <cstdlib>
+#include <tbb/task_arena.h>
+#include <tbb/global_control.h>
+#include <fenv.h>
+#include <fstream>
     
   template<>
   class IFGF_Operator<HelmholtzSLKernel<3> > : public Base_FMM_Operator<std::complex<double> > 
@@ -49,22 +52,31 @@ namespace ngbem
 	  : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
 	    kernel(_kernel)
       {
-	  std::cout<<"creating ifgf op"<<std::endl;
-	  std::complex<double> waveNumber=-1i*_kernel.GetKappa();
+	  std::cout<<"creating ifgf opitty"<<std::endl;
+
+
 	  size_t leafSize=param.leafsize;
 	  size_t order=param.expansion_order;
-	  int n_elem=1;
+	  int n_elem=param.n_elements;
 	  double tol=param.eps;
+	  double waveNumber=_kernel.GetKappa();
 
 	  std::cout<<"size="<<xpts.Size()<<std::endl;
 	  std::cout<<"size="<<ypts.Size()<<std::endl;
 
 
+	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 	  op=make_unique<HelmholtzIfgfOperator<3> > (waveNumber,leafSize,order,n_elem,tol);
 	  
 	  auto srcs=Eigen::Map<typename OperatorType::PointArray>( xpts[0].Data(),3, xpts.Size());
 	  auto targets=Eigen::Map<typename OperatorType::PointArray>(ypts[0].Data(),3, ypts.Size());
-	  
+
+
+/*	  const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", "\n");
+          std::ofstream file("srcs.csv");
+          file<<srcs.format(CSVFormat);
+          file.close();
+*/	  
 	  op->init(srcs,targets);	
       }
 
@@ -76,7 +88,8 @@ namespace ngbem
 	  auto fx = x.FV<Complex>();
 	  auto fy = y.FV<Complex>();
 
-	  //fy = 0;
+		  //fy = 0;
+	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
 
 	  auto weights=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fx.Data(),fx.Size());
@@ -112,7 +125,7 @@ namespace ngbem
 	  double waveNumber=_kernel.GetKappa();
 	  size_t leafSize=param.leafsize;
 	  size_t order=param.expansion_order;
-	  int n_elem=1;
+	  int n_elem=2;
 	  double tol=param.eps;
 	  
 	  std::cout<<"size="<<xpts.Size()<<std::endl;

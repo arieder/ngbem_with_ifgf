@@ -170,7 +170,7 @@ namespace ngbem
       
       fy = 0;
 
-      double eps = 1e-8;
+      double eps = 1e-7;
       int ier;
       int size_x = xpts.Size();
       int size_y = ypts.Size();
@@ -195,7 +195,7 @@ namespace ngbem
 
     fy = 0;
 
-    double eps = 1e-8;
+    double eps = 1e-7;
     int ier;
     std::complex<double> zk = kernel.GetKappa();
     int size_x = xpts.Size();
@@ -218,7 +218,7 @@ namespace ngbem
     
     fy = 0;
     
-    double eps = 1e-8;
+    double eps = 1e-7;
     int ier;
     Complex zk = kernel.GetKappa();
     Vector<Complex> c(xpts.Size());

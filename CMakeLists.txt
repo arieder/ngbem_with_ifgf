@@ -31,9 +31,10 @@ if(USE_IFGF)
   find_package (TBB REQUIRED)
   
   include_directories(${EIGEN3_INCLUDE_DIR} ${TBB_INCLUDE_DIR})
+  SET( CMAKE_CXX_FLAGS_RELEASE  "-Ofast ")
   target_link_libraries(_ngbem  PRIVATE tbb)
   
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Ofast")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Ofast -march=native -UUSE_NGSOLVE")
 
   
 endif(USE_IFGF)
