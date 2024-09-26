@@ -200,9 +200,12 @@ namespace ngbem
     std::complex<double> zk = kernel.GetKappa();
     int size_x = xpts.Size();
     int size_y = ypts.Size();
+    std::cout<<"doing helmholtz FMM. eps="<<eps<<std::endl;
     hfmm3d_t_c_p_(&eps, &zk, &size_x, xpts[0].Data(),
                   fx.Data(), &size_y, ypts[0].Data(),
                   fy.Data(), &ier);
+
+    std::cout<<"now eps="<<eps<<std::endl;
     if (ier != 0)
       throw Exception("FMM3D failed with err code " + std::to_string(ier));
     y *= 1.0 / (4*M_PI);
