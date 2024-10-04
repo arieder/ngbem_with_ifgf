@@ -34,7 +34,7 @@ if(USE_IFGF)
   SET( CMAKE_CXX_FLAGS_RELEASE  "-Ofast ")
   target_link_libraries(_ngbem  PRIVATE tbb)
   
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -Ofast -march=native -UUSE_NGSOLVE")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -Ofast -march=native -UUSE_NGSOLVE -flto=auto")
 
   
 endif(USE_IFGF)

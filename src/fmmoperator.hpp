@@ -149,7 +149,7 @@ namespace ngbem
 
   };
 
-  // #define USE_NGFMM
+//#define USE_NGFMM
 #ifdef USE_NGFMM
 
   template <>
