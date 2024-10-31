@@ -116,6 +116,158 @@ namespace ngbem
   }
 
 
+    template <typename KERNEL>
+  shared_ptr<BaseMatrix> GenericIntegralOperator<KERNEL> ::
+  CreateMatrixNearfield(LocalHeap & lh,  struct BEMParameters &param) const
+  {
+    static Timer tall("ngbem nearfield setup"); RegionTimer r(tall);
+    Array<Vec<3>> xpts, ypts, xnv, ynv;
+    IntegrationRule ir(ET_TRIG, param.intorder);
+    auto trial_mesh = trial_space->GetMeshAccess();
+    auto test_mesh = test_space->GetMeshAccess();
+
+    Array<int> compress_trial_els(trial_mesh->GetNE(BND));
+    Array<int> compress_test_els(test_mesh->GetNE(BND));
+    compress_trial_els = -1;
+    compress_test_els = -1;
+    
+    int cnt = 0;
+    for (auto el : trial_mesh->Elements(BND))
+      if (trial_space->DefinedOn(el))
+        if (!trial_definedon || (*trial_definedon).Mask().Test(trial_mesh->GetElIndex(el)))      
+          {
+            HeapReset hr(lh);
+            auto & trafo = trial_mesh->GetTrafo(el, lh);
+            auto & mir = static_cast<MappedIntegrationRule<2,3>&>(trafo(ir, lh));
+            for (auto & mip : mir)
+              {
+                xpts.Append(mip.GetPoint());
+                xnv.Append(mip.GetNV());
+              }
+            compress_trial_els[el.Nr()] = cnt++;
+          }
+    
+    cnt = 0;
+    for (auto el : test_mesh->Elements(BND))
+      if (test_space->DefinedOn(el))      
+        if (!test_definedon || (*test_definedon).Mask().Test(test_mesh->GetElIndex(el)))            
+          {
+            HeapReset hr(lh);
+            auto & trafo = test_mesh->GetTrafo(el, lh);
+            auto & mir = static_cast<MappedIntegrationRule<2,3>&>(trafo(ir, lh));        
+            for (auto & mip : mir)
+              {
+                ypts.Append(mip.GetPoint());
+                ynv.Append(mip.GetNV());        
+              }
+            compress_test_els[el.Nr()] = cnt++;
+          }
+    
+
+    
+    // **************   nearfield operator *****************
+
+    static Timer tfind("ngbem find near");
+    static Timer tsetupgraph("ngbem  near setup matrixgraph");
+    static Timer tassemble("ngbem near assemble nearfield");
+    static Timer tassSS("ngbem near assemble Sauter-Schwab");
+    static Timer tasscorr("ngbem near assemble correction");
+    
+    tfind.Start();
+    Array<tuple<size_t, size_t>> pairs;
+
+    Array<size_t> other;
+    for (ElementId ei : trial_mesh->Elements(BND))
+      if (trial_space->DefinedOn(ei))      
+        if (!trial_definedon || (*trial_definedon).Mask().Test(trial_mesh->GetElIndex(ei)))     
+        {
+          other.SetSize0();
+          for (auto v : trial_mesh->GetElement(ei).Vertices())
+            for (auto ej : trial_mesh->GetVertexElements(v,BND))
+              if (test_space->DefinedOn(ElementId(BND,ej)))                    
+                if (!test_definedon || (*test_definedon).Mask().Test(test_mesh->GetElIndex(ElementId(BND,ej))))
+                  {
+                    if (!other.Contains(ej))
+                      {
+                        other.Append (ej );
+                        pairs.Append ( { ei.Nr(), ej });
+                      }
+                  }
+        }
+    
+    tfind.Stop();
+    tsetupgraph.Start();
+    TableCreator<int> trial_elements_creator(pairs.Size()), test_elements_creator(pairs.Size());
+
+    for ( ; !trial_elements_creator.Done(); trial_elements_creator++, test_elements_creator++)
+      {
+        Array<DofId> dnums;
+        for (auto i : Range(pairs))
+          {
+            auto [ei_trial, ei_test] = pairs[i];
+            trial_space->GetDofNrs( { BND, ei_trial }, dnums);
+            trial_elements_creator.Add (i, dnums);
+
+            test_space->GetDofNrs( { BND, ei_test }, dnums);
+            test_elements_creator.Add (i, dnums);
+          }
+      }
+    
+    Table<int> trial_elements = trial_elements_creator.MoveTable();
+    Table<int> test_elements = test_elements_creator.MoveTable();
+
+    auto nearfield_correction =
+      make_shared<SparseMatrix<value_type>> (test_space->GetNDof(), trial_space->GetNDof(),
+                                             test_elements, trial_elements, false);
+    tsetupgraph.Stop();
+    tassemble.Start();
+    nearfield_correction->SetZero();
+
+
+    TableCreator<int> create_nbels;
+    for ( ; !create_nbels.Done(); create_nbels++)    
+      for (auto i : Range(pairs))
+        create_nbels.Add (get<0>(pairs[i]), get<1>(pairs[i]));
+    Table<int> nbels = create_nbels.MoveTable();
+
+    trial_mesh->IterateElements
+      (BND, lh, [&](auto ei_trial, LocalHeap & lh)
+      {
+        for (auto nrtest : nbels[ei_trial.Nr()])
+          {
+            ElementId ei_test(BND, nrtest);
+            
+            auto & trial_trafo = trial_mesh -> GetTrafo(ei_trial, lh);
+            auto & test_trafo = test_mesh -> GetTrafo(ei_test, lh);
+            auto & trial_fel = trial_space->GetFE(ei_trial, lh);
+            auto & test_fel = test_space->GetFE(ei_test, lh);
+            
+            Array<DofId> trial_dnums(trial_fel.GetNDof(), lh);
+            Array<DofId> test_dnums(test_fel.GetNDof(), lh);
+            
+            trial_space->GetDofNrs (ei_trial, trial_dnums);        
+            test_space->GetDofNrs (ei_test, test_dnums);
+            
+            FlatMatrix<value_type> elmat(test_dnums.Size(), trial_dnums.Size(), lh);
+            tassSS.Start();
+            CalcElementMatrix (elmat, ei_trial, ei_test, lh);
+            tassSS.Stop();
+            tasscorr.Start();        
+            
+	  
+            tasscorr.Stop();        
+            nearfield_correction -> AddElementMatrix (test_dnums, trial_dnums, elmat);
+          }
+      });
+    
+    
+    tassemble.Stop();
+    return nearfield_correction;
+    
+  }
+
+
+
   template <typename KERNEL>
   shared_ptr<BaseMatrix> GenericIntegralOperator<KERNEL> ::
   CreateMatrixFMM(LocalHeap & lh,  struct BEMParameters &param) const
@@ -274,6 +426,7 @@ namespace ngbem
     auto evaly = create_eval(*test_space, compress_test_els, *test_evaluator);    
 
     shared_ptr<BaseMatrix> fmmop;
+
     if(param.method=="fmm") {
 	std::cout<<"standard_fmm"<<std::endl;
 	fmmop = make_shared<FMM_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
@@ -506,6 +659,7 @@ namespace ngbem
     
     tassemble.Stop();
     return TransposeOperator(evaly) * fmmop * evalx + nearfield_correction;
+    
   }
   
   
@@ -721,8 +875,15 @@ namespace ngbem
     tie(identic_panel_x, identic_panel_y, identic_panel_weight) = IdenticPanelIntegrationRule(param.intorder);
     tie(common_vertex_x, common_vertex_y, common_vertex_weight) = CommonVertexIntegrationRule(param.intorder);
     tie(common_edge_x, common_edge_y, common_edge_weight) = CommonEdgeIntegrationRule(param.intorder);
-    
-    if (param.method == "fmm" || param.method=="ifgf")
+
+
+    if( param.method=="nearfield" )
+      {
+	  matrix = this->CreateMatrixNearfield(lh, param);
+	return;
+	
+      }
+    if (param.method == "fmm" || param.method=="ifgf" )
       {
 	  matrix = this->CreateMatrixFMM(lh, param);
         return;
@@ -2079,6 +2240,8 @@ namespace ngbem
   template class GenericIntegralOperator<HelmholtzSLKernel<3>>;
   template class GenericIntegralOperator<HelmholtzDLKernel<3>>;
   template class GenericIntegralOperator<HelmholtzHSKernel<3>>;
+
+  template class GenericIntegralOperator<ModifiedHelmholtzSLKernel<3>>;
   
   template class GenericIntegralOperator<CombinedFieldKernel<3>>;
 

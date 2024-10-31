@@ -35,7 +35,7 @@ PYBIND11_MODULE(_ngbem, m)
     return make_unique<GenericIntegralOperator<LaplaceSLKernel<3>>>(space, space, LaplaceSLKernel<3>(), param);
     
   }, py::arg("space"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-	py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8, py::arg("n_elements")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8, py::arg("n_elements")=1);
 
   m.def("SingleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space,
                                            optional<Region> trial_definedon, optional<Region> test_definedon,
@@ -55,7 +55,7 @@ PYBIND11_MODULE(_ngbem, m)
   }, py::arg("trial_space"), py::arg("test_space"),
         py::arg("trial_definedon")=nullopt, py::arg("test_definedon")=nullopt,
         py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-        py::arg("method")="aca", py::arg("testhmatrix")=false,py::arg("expansion_order")=8,py::arg("n_elements")=8);
+        py::arg("method")="aca", py::arg("testhmatrix")=false,py::arg("expansion_order")=8,py::arg("n_elements")=1);
   
   
 
@@ -79,7 +79,7 @@ PYBIND11_MODULE(_ngbem, m)
         py::arg("intorder")=3, py::arg("leafsize")=40,
         py::arg("eta")=2., py::arg("eps")=1e-6,
         py::arg("method")="aca", py::arg("testhmatrix")=false,
-	py::arg("expansion_order")=8,py::arg("n_elements")=8);
+	py::arg("expansion_order")=8,py::arg("n_elements")=1);
 
 
   m.def("HypersingularOperator", [](shared_ptr<FESpace> space, optional<Region> definedon,
@@ -94,7 +94,7 @@ PYBIND11_MODULE(_ngbem, m)
     
   }, py::arg("space"), py::arg("definedon")=nullopt,
         py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-        py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8,py::arg("n_elements")=8);
+        py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8,py::arg("n_elements")=1);
   
   
 
@@ -106,7 +106,18 @@ PYBIND11_MODULE(_ngbem, m)
     return make_unique<GenericIntegralOperator<HelmholtzSLKernel<3>>>(trial_space, test_space, HelmholtzSLKernel<3>(kappa), param);
     
   }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=1);
+
+
+  m.def("ModifiedHelmholtzSingleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space, Complex kappa,
+                                                    int intorder, int leafsize, double eta, double eps,
+                                                    string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<Complex>>
+  {
+      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
+    return make_unique<GenericIntegralOperator<ModifiedHelmholtzSLKernel<3>>>(trial_space, test_space, ModifiedHelmholtzSLKernel<3>(kappa), param);
+    
+  }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=1);
 
 
 
@@ -118,7 +129,7 @@ PYBIND11_MODULE(_ngbem, m)
     return make_unique<GenericIntegralOperator<HelmholtzDLKernel<3>>>(trial_space, test_space, HelmholtzDLKernel<3>(kappa), param);
     
   }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=1);
 
 
   m.def("HelmholtzCombinedFieldOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space,
@@ -136,7 +147,7 @@ PYBIND11_MODULE(_ngbem, m)
   }, py::arg("trial_space"), py::arg("test_space")=nullptr,
         py::arg("trial_definedon")=nullopt, py::arg("test_definedon")=nullopt,        
         py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-	py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8,py::arg("n_elements")=8);
+	py::arg("method")="aca", py::arg("testhmatrix")=false, py::arg("expansion_order")=8,py::arg("n_elements")=1);
 
 
 

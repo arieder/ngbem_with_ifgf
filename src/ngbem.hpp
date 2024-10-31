@@ -79,6 +79,7 @@ namespace ngbem
 
 
       virtual shared_ptr<BaseMatrix> CreateMatrixFMM(LocalHeap & lh,   struct BEMParameters &param) const = 0;
+      virtual shared_ptr<BaseMatrix> CreateMatrixNearfield(LocalHeap & lh,   struct BEMParameters &param) const = 0;
     
     /** CalcBlockMatrix computes the block of entries with trialdofs and testdofs indices. */
     virtual void CalcBlockMatrix(FlatMatrix<T> matrix,
@@ -183,6 +184,7 @@ namespace ngbem
                       LocalHeap &lh) const override;
 
     shared_ptr<BaseMatrix> CreateMatrixFMM(LocalHeap & lh, struct BEMParameters &param) const override;
+    shared_ptr<BaseMatrix> CreateMatrixNearfield(LocalHeap & lh, struct BEMParameters &param) const override;
     
     virtual shared_ptr<CoefficientFunction> GetPotential(shared_ptr<GridFunction> gf) const override;
   };
@@ -358,6 +360,34 @@ namespace ngbem
     double GetKappa() const { return kappa; }
     Array<KernelTerm> terms = { KernelTerm{1.0, 0, 0, 0}, };    
   };
+
+
+
+  template <int DIM> class ModifiedHelmholtzSLKernel;
+
+  template<>
+  class ModifiedHelmholtzSLKernel<3> 
+  {
+    Complex kappa;
+  public:
+    typedef Complex value_type;
+    static string Name() { return "ModifiedHelmholtzSL"; }
+    
+    /** Construction of the kernel specifies the wavenumber $\kappa$. */
+    ModifiedHelmholtzSLKernel (Complex _kappa) : kappa(_kappa) { }
+
+    template <typename T>
+    auto Evaluate (Vec<3,T> x, Vec<3,T> y, Vec<3,T> nx, Vec<3,T> ny) const
+    {
+      T norm = L2Norm(x-y);
+      auto kern = exp(-kappa*norm) / (4 * M_PI * norm);
+      // return kern;
+      return Vec<1,decltype(kern)> (kern);
+    }
+    Complex GetKappa() const { return kappa; }
+    Array<KernelTerm> terms = { KernelTerm{1.0, 0, 0, 0}, };    
+  };
+
 
 
   /** HelmholtzDLkernel is the kernel for the double layer potential of 
