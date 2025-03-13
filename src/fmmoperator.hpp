@@ -11,10 +11,10 @@ extern "C" {
 #endif // USE_KiFMM
 
 #ifdef USE_IFGF
-#include <helmholtz_ifgf.hpp>
-#include <combined_field_helmholtz_ifgf.hpp>
-#include <laplace_ifgf.hpp>
-#include <Eigen/Dense>
+//#include <helmholtz_ifgf.hpp>
+//#include <combined_field_helmholtz_ifgf.hpp>
+//#include <laplace_ifgf.hpp>
+//#include <Eigen/Dense>
 
 #endif
 

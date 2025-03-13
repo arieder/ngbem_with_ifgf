@@ -2,8 +2,17 @@
 #define FILE_IFGFOPERATOR
 
 
+#include <Eigen/Dense>
+
+#include <cstdlib>
+#include <tbb/task_arena.h>
+#include <tbb/global_control.h>
+#include <fenv.h>
+#include <fstream>
+
 #include "fmmoperator.hpp"
 #include "ngbem.hpp"
+#include <helmholtz_ifgf.hpp>
 
 
 namespace ngbem
@@ -24,17 +33,10 @@ namespace ngbem
     };
 #ifdef USE_IFGF
 
-#include <helmholtz_ifgf.hpp>
-#include <grad_helmholtz_ifgf.hpp>
-#include <combined_field_helmholtz_ifgf.hpp>
-#include <laplace_ifgf.hpp>
-#include <Eigen/Dense>
+//#include <grad_helmholtz_ifgf.hpp>
+//#include <combined_field_helmholtz_ifgf.hpp>
+//#include <laplace_ifgf.hpp>
 
-    #include <cstdlib>
-#include <tbb/task_arena.h>
-#include <tbb/global_control.h>
-#include <fenv.h>
-#include <fstream>
     
   template<>
   class IFGF_Operator<HelmholtzSLKernel<3> > : public Base_FMM_Operator<std::complex<double> > 
@@ -93,8 +95,8 @@ namespace ngbem
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
 
-	  auto weights=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fx.Data(),fx.Size());
-	  auto results=op->mult(weights);
+	  auto weights=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fx.Data(),fx.Size()).template cast<std::complex<RealScalar> >();
+	  auto results=op->mult(weights).template cast<std::complex<double> >();
 
 
 	  auto y_map=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fy.Data(),fy.Size());
@@ -105,7 +107,7 @@ namespace ngbem
   };
 
 
-
+#if 0
       template<>
   class IFGF_Operator<ModifiedHelmholtzSLKernel<3> > : public Base_FMM_Operator<std::complex<double> > 
   {
@@ -302,6 +304,6 @@ namespace ngbem
   
 }
 
-
+#endif
 #endif
 
