@@ -1,6 +1,7 @@
 #ifndef FILE_IFGFOPERATOR
 #define FILE_IFGFOPERATOR
 
+#include <solve.hpp>
 
 #include <Eigen/Dense>
 
@@ -12,8 +13,10 @@
 
 #include "fmmoperator.hpp"
 #include "ngbem.hpp"
-#include <helmholtz_ifgf.hpp>
 
+#include "ifgf_library.hpp"
+
+typedef std::complex<double> Complex;
 
 namespace ngbem
 {
@@ -42,7 +45,7 @@ namespace ngbem
   class IFGF_Operator<HelmholtzSLKernel<3> > : public Base_FMM_Operator<std::complex<double> > 
   {
       typedef HelmholtzSLKernel<3>  KERNEL;
-      typedef HelmholtzIfgfOperator<3> OperatorType;
+      typedef HelmholtzIfgfOperator3d OperatorType;
       typedef Base_FMM_Operator<std::complex<double > > BASE;
 
   protected:
@@ -55,7 +58,7 @@ namespace ngbem
 	  : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
 	    kernel(_kernel)
       {
-	  std::cout<<"creating ifgf opitty"<<std::endl;
+	  std::cout<<"creating ifgf op"<<std::endl;
 
 
 	  size_t leafSize=param.leafsize;
@@ -64,23 +67,11 @@ namespace ngbem
 	  double tol=param.eps;
 	  double waveNumber=_kernel.GetKappa();
 
-	  std::cout<<"size="<<xpts.Size()<<std::endl;
-	  std::cout<<"size="<<ypts.Size()<<std::endl;
 
-
-	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
-	  op=make_unique<HelmholtzIfgfOperator<3> > (waveNumber,leafSize,order,n_elem,tol);
+	  op=make_unique<HelmholtzIfgfOperator3d > (waveNumber,leafSize,order,n_elem,tol);
 	  
-	  auto srcs=Eigen::Map<typename OperatorType::PointArray>( xpts[0].Data(),3, xpts.Size());
-	  auto targets=Eigen::Map<typename OperatorType::PointArray>(ypts[0].Data(),3, ypts.Size());
 
-
-/*	  const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", "\n");
-          std::ofstream file("srcs.csv");
-          file<<srcs.format(CSVFormat);
-          file.close();
-*/	  
-	  op->init(srcs,targets);	
+	  op->init(xpts[0].Data(), xpts.Size(),ypts[0].Data(),ypts.Size());	
       }
 
 
@@ -88,20 +79,15 @@ namespace ngbem
       {
 	  std::cout<<"ifgf mult"<<std::endl;
 	  static Timer tall("ngbem fmm apply HelmholtzCF (IFGF)"); RegionTimer reg(tall);
-	  auto fx = x.FV<Complex>();
-	  auto fy = y.FV<Complex>();
+	  auto fx = x.template FV<std::complex<double> >();
+	  auto fy = y.template FV<std::complex<double> >();
 
 		  //fy = 0;
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
 
 	  auto weights=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fx.Data(),fx.Size()).template cast<std::complex<RealScalar> >();
-	  auto results=op->mult(weights).template cast<std::complex<double> >();
-
-
-	  auto y_map=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fy.Data(),fy.Size());
-	  y_map=results;
-	  //y *= 1.0 / (4*M_PI);
+	  op->mult(fx.Data(),fx.Size(),fy.Data(),fy.Size());
       }
 
   };
