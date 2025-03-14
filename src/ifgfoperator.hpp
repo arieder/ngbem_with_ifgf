@@ -86,19 +86,17 @@ namespace ngbem
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
 
-	  auto weights=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fx.Data(),fx.Size()).template cast<std::complex<RealScalar> >();
 	  op->mult(fx.Data(),fx.Size(),fy.Data(),fy.Size());
       }
 
   };
 
 
-#if 0
       template<>
   class IFGF_Operator<ModifiedHelmholtzSLKernel<3> > : public Base_FMM_Operator<std::complex<double> > 
   {
       typedef ModifiedHelmholtzSLKernel<3>  KERNEL;
-      typedef GradHelmholtzIfgfOperator<3> OperatorType;
+      typedef ModifiedHelmholtzIfgfOperator3d OperatorType;
       typedef Base_FMM_Operator<std::complex<double > > BASE;
 
   protected:
@@ -124,20 +122,22 @@ namespace ngbem
 	  std::cout<<"size="<<ypts.Size()<<std::endl;
 
 
-	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
-	  op=make_unique<GradHelmholtzIfgfOperator<3> > (waveNumber,leafSize,order,n_elem,tol);
+	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);
+
+	  
+	  op=make_unique<ModifiedHelmholtzIfgfOperator3d > (std::complex<RealScalar>(waveNumber),leafSize,order,n_elem,tol);
+	  
+
+	  op->init(xpts[0].Data(), xpts.Size(),ypts[0].Data(),ypts.Size());	
+
+	  /*op=make_unique<GradHelmholtzIfgfOperator<3> > (waveNumber,leafSize,order,n_elem,tol);
 	  op->setDx(-1);
 	  
 	  auto srcs=Eigen::Map<typename OperatorType::PointArray>( xpts[0].Data(),3, xpts.Size());
 	  auto targets=Eigen::Map<typename OperatorType::PointArray>(ypts[0].Data(),3, ypts.Size());
+	  op->init(srcs,targets); */
 
 
-/*	  const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", "\n");
-          std::ofstream file("srcs.csv");
-          file<<srcs.format(CSVFormat);
-          file.close();
-*/	  
-	  op->init(srcs,targets);	
       }
 
 
@@ -151,18 +151,13 @@ namespace ngbem
 		  //fy = 0;
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
-
-	  auto weights=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fx.Data(),fx.Size());
-	  auto results=op->mult(weights);
-
-
-	  auto y_map=Eigen::Map< Eigen::Vector<std::complex<double>, Eigen::Dynamic> >(fy.Data(),fy.Size());
-	  y_map=results;
+	  op->mult(fx.Data(),fx.Size(),fy.Data(),fy.Size());
 	  //y *= 1.0 / (4*M_PI);
       }
 
   };
 
+#if 0
 
 
     template<>
