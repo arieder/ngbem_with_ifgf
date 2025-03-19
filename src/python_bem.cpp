@@ -111,13 +111,13 @@ PYBIND11_MODULE(_ngbem, m)
 
   m.def("ModifiedHelmholtzSingleLayerPotentialOperator", [](shared_ptr<FESpace> trial_space, shared_ptr<FESpace> test_space, Complex kappa,
                                                     int intorder, int leafsize, double eta, double eps,
-                                                    string method, bool testhmatrix, int expansion_order, int n_elements) -> shared_ptr<IntegralOperator<Complex>>
+							    string method, bool testhmatrix, int expansion_order, int n_elements, double maxk) -> shared_ptr<IntegralOperator<Complex>>
   {
-      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements});
+      BEMParameters param({intorder, leafsize, eta, eps, method, testhmatrix,expansion_order,n_elements,maxk});
     return make_unique<GenericIntegralOperator<ModifiedHelmholtzSLKernel<3>>>(trial_space, test_space, ModifiedHelmholtzSLKernel<3>(kappa), param);
     
   }, py::arg("trial_space"), py::arg("test_space")=nullptr, py::arg("kappa"), py::arg("intorder")=3, py::arg("leafsize")=40, py::arg("eta")=2., py::arg("eps")=1e-6,
-	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=1);
+	py::arg("method")="aca", py::arg("testhmatrix")=false,  py::arg("expansion_order")=8,py::arg("n_elements")=1,py::arg("maxk")=-1);
 
 
 

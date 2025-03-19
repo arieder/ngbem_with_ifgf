@@ -26,7 +26,9 @@ namespace ngbem
     bool testhmatrix;
     //order of the fmm/ifgf expansion
     const int expansion_order;
-    const int n_elements;  
+    const int n_elements;
+
+      const double maxk=-1;
   };
 
 

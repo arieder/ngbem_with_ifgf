@@ -117,6 +117,7 @@ namespace ngbem
 	  int n_elem=param.n_elements;
 	  double tol=param.eps;
 	  Complex waveNumber=_kernel.GetKappa();
+	  double maxk=param.maxk;
 
 	  std::cout<<"size="<<xpts.Size()<<std::endl;
 	  std::cout<<"size="<<ypts.Size()<<std::endl;
@@ -125,7 +126,7 @@ namespace ngbem
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);
 
 	  
-	  op=make_unique<ModifiedHelmholtzIfgfOperator3d > (std::complex<RealScalar>(waveNumber),leafSize,order,n_elem,tol);
+	  op=make_unique<ModifiedHelmholtzIfgfOperator3d > (std::complex<RealScalar>(waveNumber),leafSize,order,n_elem,tol,maxk);
 	  
 
 	  op->init(xpts[0].Data(), xpts.Size(),ypts[0].Data(),ypts.Size());	
