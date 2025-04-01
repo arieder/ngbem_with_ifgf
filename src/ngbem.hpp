@@ -28,8 +28,8 @@ namespace ngbem
     const int expansion_order;
     const int n_elements;
 
-      const double maxk=-1;
-      const bool eval_nearfield=false;
+    const double maxk=-1;
+    const bool eval_nearfield;
   };
 
 

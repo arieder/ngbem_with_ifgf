@@ -119,6 +119,7 @@ namespace ngbem
     shared_ptr<BaseMatrix> GenericIntegralOperator<KERNEL> ::
     CreateNearfieldEvaluator(LocalHeap &lh, struct BEMParameters& param) const	
   {
+      std::cout<<"creating NF evaluator"<<std::endl;
       static Timer tall("ngbem nearfield eval setup"); RegionTimer r(tall);
       IntegrationRule ir(ET_TRIG, param.intorder);
       auto trial_mesh = trial_space->GetMeshAccess();
@@ -479,14 +480,17 @@ namespace ngbem
     }
     else {
 	shared_ptr<BaseMatrix> nfop;
+	std::cout<<"Hello="<<param.eval_nearfield<<std::endl;
 	if(param.eval_nearfield) {
 	     nfop=CreateNearfieldEvaluator(lh,param);
 	}
 	fmmop = make_shared<IFGF_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
 						    std::move(xnv), std::move(ynv),param,nfop,evalx,evaly);
 
-	
-	
+
+	if(param.eval_nearfield) {
+	    return fmmop;
+	}
     }
 
 
