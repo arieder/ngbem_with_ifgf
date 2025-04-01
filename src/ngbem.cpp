@@ -7,7 +7,7 @@
 #include "fmmoperator.hpp"
 
 
-
+#include "nearfieldoperator.hpp"
 #include "ifgfoperator.hpp"
 
 
@@ -113,6 +113,50 @@ namespace ngbem
             creator2.Add (d, i);
         }
     elems4dof2 = creator2.MoveTable();
+  }
+
+    template <typename KERNEL>
+    shared_ptr<BaseMatrix> GenericIntegralOperator<KERNEL> ::
+    CreateNearfieldEvaluator(LocalHeap &lh, struct BEMParameters& param) const	
+  {
+      static Timer tall("ngbem nearfield eval setup"); RegionTimer r(tall);
+      IntegrationRule ir(ET_TRIG, param.intorder);
+      auto trial_mesh = trial_space->GetMeshAccess();
+      auto test_mesh = test_space->GetMeshAccess();
+
+
+
+      Array<tuple<size_t, size_t> > pairs;
+
+      Array<size_t> other;
+      for (ElementId ei : trial_mesh->Elements(BND))
+	  if (trial_space->DefinedOn(ei))      
+        if (!trial_definedon || (*trial_definedon).Mask().Test(trial_mesh->GetElIndex(ei)))     
+        {
+          other.SetSize0();
+          for (auto v : trial_mesh->GetElement(ei).Vertices())
+            for (auto ej : trial_mesh->GetVertexElements(v,BND))
+              if (test_space->DefinedOn(ElementId(BND,ej)))                    
+                if (!test_definedon || (*test_definedon).Mask().Test(test_mesh->GetElIndex(ElementId(BND,ej))))
+                  {
+                    if (!other.Contains(ej))
+                      {
+                        other.Append (ej );
+                        pairs.Append ( { ei.Nr(), ej });
+                      }
+                  }
+        }
+
+
+      TableCreator<int> create_nbels;
+      for ( ; !create_nbels.Done(); create_nbels++)    
+	  for (auto i : Range(pairs))
+	      create_nbels.Add (get<0>(pairs[i]), get<1>(pairs[i]));
+      Table<int> nbels = create_nbels.MoveTable();
+      
+      return std::make_shared<NearfieldOperator<KERNEL> >(kernel,nbels,trial_space, test_space,trial_evaluator,test_evaluator,param.intorder);
+
+	  
   }
 
 
@@ -434,8 +478,15 @@ namespace ngbem
 
     }
     else {
+	shared_ptr<BaseMatrix> nfop;
+	if(param.eval_nearfield) {
+	     nfop=CreateNearfieldEvaluator(lh,param);
+	}
 	fmmop = make_shared<IFGF_Operator<KERNEL>> (kernel, std::move(xpts), std::move(ypts),
-						    std::move(xnv), std::move(ynv),param);
+						    std::move(xnv), std::move(ynv),param,nfop,evalx,evaly);
+
+	
+	
     }
 
 
@@ -602,6 +653,7 @@ namespace ngbem
             
             FlatMatrix<value_type> elmat(test_dnums.Size(), trial_dnums.Size(), lh);
             tassSS.Start();
+	    elmat=0;
             CalcElementMatrix (elmat, ei_trial, ei_test, lh);
             tassSS.Stop();
             tasscorr.Start();        
@@ -658,7 +710,15 @@ namespace ngbem
 
     
     tassemble.Stop();
-    return TransposeOperator(evaly) * fmmop * evalx + nearfield_correction;
+    if(param.method=="fmm") {
+	return TransposeOperator(evaly) * fmmop * evalx + nearfield_correction;
+    }
+    else
+    {
+	static_pointer_cast<IFGF_Operator<KERNEL> > (fmmop)->SetNearfield(nearfield_correction);
+	return fmmop;
+    }
+    
     
   }
   
@@ -1315,7 +1375,7 @@ namespace ngbem
     
     static Timer tall("ngbem - elementmatrix " + KERNEL::Name());
     RegionTimer reg(tall);
-
+ 
     static Timer t1("ngbem - elementmatrix, part1  " + KERNEL::Name());
 
     t1.Start();

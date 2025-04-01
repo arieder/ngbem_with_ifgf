@@ -1,6 +1,7 @@
 #ifndef FILE_IFGFOPERATOR
 #define FILE_IFGFOPERATOR
 
+#include <basematrix.hpp>
 #include <solve.hpp>
 
 #include <Eigen/Dense>
@@ -16,6 +17,8 @@
 
 #include "ifgf_library.hpp"
 
+#include "nearfieldoperator.hpp"
+
 typedef std::complex<double> Complex;
 
 namespace ngbem
@@ -26,19 +29,31 @@ namespace ngbem
     {
     public:
 	IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		      Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param)
+		      Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param, shared_ptr<BaseMatrix> _nfop,
+		      shared_ptr<BaseMatrix> _evalx,
+		      shared_ptr<BaseMatrix> _evaly)
 	    :
 	    FMM_Operator<KERNEL>(_kernel,std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv))
 	{
 
 	}
+	
+	void SetNearfield(shared_ptr<BaseMatrix> _nfop)
+      {
+	
+      }
+
       
     };
+
+    
 #ifdef USE_IFGF
 
 //#include <grad_helmholtz_ifgf.hpp>
 //#include <combined_field_helmholtz_ifgf.hpp>
 //#include <laplace_ifgf.hpp>
+
+
 
     
   template<>
@@ -47,16 +62,31 @@ namespace ngbem
       typedef HelmholtzSLKernel<3>  KERNEL;
       typedef HelmholtzIfgfOperator3d OperatorType;
       typedef Base_FMM_Operator<std::complex<double > > BASE;
-
+      using value_type = typename  KERNEL::value_type;  
+      
+      bool do_nearfield;
   protected:
       std::unique_ptr<OperatorType> op;
       KERNEL kernel;
+      shared_ptr<BaseMatrix> nfop;
+      
+      shared_ptr<BaseMatrix> evalx;
+      shared_ptr<BaseMatrix> evaly;
+
 
   public:
       IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv, const BEMParameters& param)
+		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv, const BEMParameters& param, shared_ptr<BaseMatrix> _nfop,
+		    shared_ptr<BaseMatrix> _evalx,
+		    shared_ptr<BaseMatrix> _evaly
+		    )
 	  : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
-	    kernel(_kernel)
+	    kernel(_kernel),
+	    do_nearfield(true),
+	    nfop(_nfop),
+	    evalx(_evalx),
+	    evaly(_evaly)
+      
       {
 	  std::cout<<"creating ifgf op"<<std::endl;
 
@@ -79,18 +109,44 @@ namespace ngbem
       {
 	  std::cout<<"ifgf mult"<<std::endl;
 	  static Timer tall("ngbem fmm apply HelmholtzCF (IFGF)"); RegionTimer reg(tall);
-	  auto fx = x.template FV<std::complex<double> >();
-	  auto fy = y.template FV<std::complex<double> >();
 
-		  //fy = 0;
+	  auto tmp = VVector<value_type>(ypts.Size());
+	  auto ftmp = tmp.template FV<value_type >();
+
+	  auto tmpx = VVector<value_type>(xpts.Size());
+
+	  tmpx=0;
+	  evalx->Mult(x,tmpx);
+	  
+	  auto fx = tmpx.FV<Complex>();
+
+	  y=0;
+	  tmp=0;
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
+	  //all of the work is done one the GPU anyway, we just need the CPU to supervise. 
+	  std::thread t1([&]() {
+	      op->mult(fx.Data(),fx.Size(),ftmp.Data(),ftmp.Size());
+	  });
 
-	  op->mult(fx.Data(),fx.Size(),fy.Data(),fy.Size());
+	  nfop->Mult(x,y);
+
+
+	  t1.join();	  
+	  
+	  //y+=TransposeOperator(evaly)*tmp;
+	  evaly->MultTransAdd(1,tmp,y);
+	  
       }
 
-  };
 
+      void SetNearfield(shared_ptr<BaseMatrix> _nfop)
+      {
+	  nfop=_nfop;
+      }
+
+
+  };
 
       template<>
   class IFGF_Operator<ModifiedHelmholtzSLKernel<3> > : public Base_FMM_Operator<std::complex<double> > 
@@ -99,15 +155,28 @@ namespace ngbem
       typedef ModifiedHelmholtzIfgfOperator3d OperatorType;
       typedef Base_FMM_Operator<std::complex<double > > BASE;
 
+      using value_type = typename  KERNEL::value_type;  
+
   protected:
       std::unique_ptr<OperatorType> op;
       KERNEL kernel;
+      shared_ptr<BaseMatrix> nfop;
+
+      shared_ptr<BaseMatrix> evalx;
+      shared_ptr<BaseMatrix> evaly;
+
 
   public:
       IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
-		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv, const BEMParameters& param)
+		    Array<Vec<3>> _xnv, Array<Vec<3>> _ynv, const BEMParameters& param, shared_ptr<BaseMatrix> _nfop,
+		    shared_ptr<BaseMatrix> _evalx,
+		    shared_ptr<BaseMatrix> _evaly
+		    )
 	  : BASE(std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
-	    kernel(_kernel)
+	  kernel(_kernel),
+	  nfop(_nfop),
+	  evalx(_evalx),
+	  evaly(_evaly)
       {
 	  std::cout<<"creating ifgf opitty"<<std::endl;
 
@@ -142,19 +211,47 @@ namespace ngbem
       }
 
 
-      void  Mult(const BaseVector & x, BaseVector & y) const 
+            void  Mult(const BaseVector & x, BaseVector & y) const 
       {
 	  std::cout<<"ifgf mult"<<std::endl;
 	  static Timer tall("ngbem fmm apply HelmholtzCF (IFGF)"); RegionTimer reg(tall);
-	  auto fx = x.FV<Complex>();
-	  auto fy = y.FV<Complex>();
 
-		  //fy = 0;
+	  auto tmp = VVector<value_type>(ypts.Size());
+	  auto ftmp = tmp.template FV<value_type >();
+
+	  auto tmpx = VVector<value_type>(xpts.Size());
+
+	  tmpx=0;
+	  evalx->Mult(x,tmpx);
+	  
+	  auto fx = tmpx.FV<Complex>();
+
+	  y=0;
+	  tmp=0;
 	  //auto global_control = tbb::global_control( tbb::global_control::max_allowed_parallelism,      12);                                                                                                                                                                                   
 
-	  op->mult(fx.Data(),fx.Size(),fy.Data(),fy.Size());
-	  //y *= 1.0 / (4*M_PI);
+	  //all of the work is done one the GPU anyway, we just need the CPU to supervise. 
+	  std::thread t1([&]() {
+	      op->mult(fx.Data(),fx.Size(),ftmp.Data(),ftmp.Size());
+	  });
+
+	  nfop->Mult(x,y);
+
+
+	  t1.join();	  
+	  
+	  //y+=TransposeOperator(evaly)*tmp;
+	  evaly->MultTransAdd(1,tmp,y);
+	  
       }
+
+
+      void SetNearfield(shared_ptr<BaseMatrix> _nfop)
+      {
+	  nfop=_nfop;
+      }
+
+
 
   };
 

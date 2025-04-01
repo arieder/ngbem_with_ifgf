@@ -29,6 +29,7 @@ namespace ngbem
     const int n_elements;
 
       const double maxk=-1;
+      const bool eval_nearfield=false;
   };
 
 
@@ -180,6 +181,9 @@ namespace ngbem
     void CalcElementMatrix(FlatMatrix<value_type> matrix,
                            ElementId ei_trial, ElementId ei_test,
                            LocalHeap &lh) const override;
+
+      
+      shared_ptr<BaseMatrix> CreateNearfieldEvaluator(LocalHeap &lh, struct BEMParameters& param) const;
     
     unique_ptr<LowRankMatrix<value_type>>
     CalcFarFieldBlock(FlatArray<DofId> trialdofs, FlatArray<DofId> testdofs,
