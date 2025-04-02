@@ -71,6 +71,17 @@ namespace ngbem
     {
       return make_unique<VVector<TSCAL>>(ypts.Size());
     }
+
+
+    int VHeight() const
+    {
+	return ypts.Size();
+    }
+
+    int VWidth() const
+    {
+	return xpts.Size();
+    }
   };
 
 
