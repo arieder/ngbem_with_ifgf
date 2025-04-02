@@ -27,23 +27,38 @@ namespace ngbem
     template<typename KERNEL>
     class  IFGF_Operator : public FMM_Operator<KERNEL >
     {
+    protected:
+	shared_ptr<BaseMatrix> evalx;
+	shared_ptr<BaseMatrix> evaly;
     public:
 	IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
 		      Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param, shared_ptr<BaseMatrix> _nfop,
 		      shared_ptr<BaseMatrix> _evalx,
 		      shared_ptr<BaseMatrix> _evaly)
 	    :
-	    FMM_Operator<KERNEL>(_kernel,std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv))
+	    FMM_Operator<KERNEL>(_kernel,std::move(_xpts), std::move( _ypts), std::move(_xnv), std::move(_ynv)),
+	    evalx(_evalx),
+	    evaly(_evaly)
 	{
 
 	}
 	
 	void SetNearfield(shared_ptr<BaseMatrix> _nfop)
-      {
+	{
 	
-      }
+	}
 
-      
+	int VHeight() const
+	{
+	    return evaly->Width();
+	}
+	
+	int VWidth() const
+	{
+	    return evalx->Width();
+	}
+
+	
     };
 
     
@@ -65,14 +80,14 @@ namespace ngbem
       using value_type = typename  KERNEL::value_type;  
       
       bool do_nearfield;
+
+      shared_ptr<BaseMatrix> evalx;
+      shared_ptr<BaseMatrix> evaly;
   protected:
       std::unique_ptr<OperatorType> op;
       KERNEL kernel;
       shared_ptr<BaseMatrix> nfop;
-      
-      shared_ptr<BaseMatrix> evalx;
-      shared_ptr<BaseMatrix> evaly;
-
+     
 
   public:
       IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
@@ -144,6 +159,17 @@ namespace ngbem
       {
 	  nfop=_nfop;
       }
+
+      	int VHeight() const
+	{
+	    return evaly->Width();
+	}
+	
+	int VWidth() const
+	{
+	    return evalx->Width();
+	}
+
 
 
   };
@@ -250,6 +276,18 @@ namespace ngbem
       {
 	  nfop=_nfop;
       }
+
+
+      int VHeight() const
+      {
+	  return evaly->Width();
+      }
+	
+      int VWidth() const
+      {
+	  return evalx->Width();
+      }
+
 
 
 
