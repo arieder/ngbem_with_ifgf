@@ -27,9 +27,13 @@ namespace ngbem
     template<typename KERNEL>
     class  IFGF_Operator : public FMM_Operator<KERNEL >
     {
+	using value_type = typename  KERNEL::value_type;  
+
     protected:
 	shared_ptr<BaseMatrix> evalx;
 	shared_ptr<BaseMatrix> evaly;
+
+	
     public:
 	IFGF_Operator(KERNEL _kernel, Array<Vec<3> > _xpts, Array<Vec<3> > _ypts,
 		      Array<Vec<3>> _xnv, Array<Vec<3>> _ynv,const BEMParameters& param, shared_ptr<BaseMatrix> _nfop,
@@ -57,6 +61,17 @@ namespace ngbem
 	{
 	    return evalx->Width();
 	}
+
+	AutoVector CreateRowVector () const override
+	{
+	    return make_unique<VVector<value_type>>(VHeight());
+	}
+	AutoVector CreateColVector () const override
+	{
+	    return make_unique<VVector<value_type>>(VWidth());
+	}
+
+
 
 	
     };
@@ -160,15 +175,26 @@ namespace ngbem
 	  nfop=_nfop;
       }
 
-      	int VHeight() const
-	{
-	    return evaly->Width();
-	}
-	
-	int VWidth() const
-	{
-	    return evalx->Width();
-	}
+      int VHeight() const
+      {
+	  return evaly->Width();
+      }
+      
+      int VWidth() const
+      {
+	  return evalx->Width();
+      }
+
+
+      AutoVector CreateRowVector () const override
+      {
+	  return make_unique<VVector<value_type>>(VHeight());
+      }
+      AutoVector CreateColVector () const override
+      {
+	  return make_unique<VVector<value_type>>(VWidth());
+      }
+
 
 
 
@@ -287,6 +313,17 @@ namespace ngbem
       {
 	  return evalx->Width();
       }
+
+
+      AutoVector CreateRowVector () const override
+      {
+	  return make_unique<VVector<value_type>>(VHeight());
+      }
+      AutoVector CreateColVector () const override
+      {
+	  return make_unique<VVector<value_type>>(VWidth());
+      }
+
 
 
 
